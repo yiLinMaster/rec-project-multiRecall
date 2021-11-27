@@ -10,7 +10,7 @@ def save_redis(items, db = 7):
     redis_url = "redis://:@127.0.0.1:6379/" + str(db)
     pool = redis.from_url(redis_url)
     try:
-        for item in items:
+        for item in items.items():
             pool.set(item[0], item[1])
     except:
         traceback.print_exc()
@@ -22,7 +22,7 @@ def read_embedding_file(file):
         for line in f:
             tmp = line.split("\t")
             embedding = [float(_) for _ in tmp[1].split(",")]  
-            dic[tmp[0]] = json.dumps(embedding)
+            dic[tmp[0]] = json.dumps(tmp[1])
     return dic
 
 if __name__ == "__main__":

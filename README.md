@@ -1,8 +1,8 @@
-## Project2-Multi-recall实践
+## Project2-Multi-Recall实践
 
 ### 一、主要方法：
 
-多路召回为用户进行文章推荐实践
+文章推荐场景下多路召回实践，使用user_baseCF，item_basedCF, matrix_basedCF, FM算法
 
 recall策略
    * item_cf: 保存相似度最高的文章列表-算法：basic 相似度度量 + 关联关系：click_time权重，类别权重 
@@ -15,14 +15,15 @@ recall策略
      
         * fm-i2i：保存相似度最高的文章列表-使用fm算法结果得到各文章隐向量再进行计算，同matrix_cf
         * fm-u2u：保存相似度最高的用户列表-使用fm算法结果得到各用户隐向量再进行计算
-            
+          
         
 
 ### 二、代码结构
 
 #### 1.feature_server: 提取user_feature, item_feature存于redis db1，db2
 
-#### 2.recall_server：调用各策略算法,保存对应结果在redis
+#### 2.recall_server：调用各策略算法,保存对应中间结果在redis
+
     * item_cf: i2i_sim_list - db4
     * user_cf: u2u_sim_list - db5
     * matrix_cf: i2i_sim_list - db3
@@ -37,6 +38,12 @@ recall策略
     * ps.py
     * auc.py
 
+#### 4.vector_server:定义向量服务部分VectorServer类，快速获取最相似向量
+
+由于user_embedding中env等信息需要在引擎发出请求的时候获得，所以不能预先都存在redis里；需要在组装好user_embedding之后调用vector_server。所以预先封装一个可以提供vector_server的接口
+
+#### 5.server_inf：主体部分，定义RecallServer类进行统一调度，其中定义各feature_pool、中间结果pool
+
 
 
 ### 三、原始数据描述
@@ -49,7 +56,7 @@ recall策略
 
 ### 四、学习点小结：
 
-* redis db的使用:pool.set/ pool.get
+* redis db的使用:pool.set/ pool.get/pool.keys/pool.pipeline
 
 * tqdm进度条好看
 
@@ -73,6 +80,8 @@ recall策略
 * 复习模型训练过程：定义ps，inputfn类，将数据iterator和setup_graph绑定，建立sess开始训练(以及其他交互，如将更新参数回传ps...)
 
 * 复习valid_step输出验证集上结果:try except
+
+* 理解线上召回流程：召回服务统一调度模块定义recallserver类，进行各路召回结果的汇总。具体每路召回如fm_usi，必要信息如user_env等在引擎发出请求时实时传入，然后在线读取feature_server对应的redis组装成user_embedding,其它数据可以预先存于其它redis（如fm_i2i_recall中间结果等,不及时更新）,预先计划好；然后调用vector_server算出相似电影列表。
 
     
 
