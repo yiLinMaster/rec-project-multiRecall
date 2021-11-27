@@ -27,7 +27,7 @@ recall策略
     * item_cf: i2i_sim_list - db4
     * user_cf: u2u_sim_list - db5
     * matrix_cf: i2i_sim_list - db3
-    * fm: i2i_sim_list - db6,  i_feature_embedding - db7, u_feature_embedding - db8
+    * fm: i2i_sim_list - db6,  i_embedding - db7, u_feature_embedding - db8
 
 #### 3.model:算法训练部分
     * data_processing: 构建正负样本，将样本特征hash化，将数据转化为tfrecords形式保存
@@ -42,9 +42,16 @@ recall策略
 
 由于user_embedding中env等信息需要在引擎发出请求的时候获得，所以不能预先都存在redis里；需要在组装好user_embedding之后调用vector_server。所以预先封装一个可以提供vector_server的接口
 
-#### 5.server_inf：主体部分，定义RecallServer类进行统一调度，其中定义各feature_pool、中间结果pool
+#### 5.server_inf：主体部分:接收引擎请求，计算/取出各个策略的recall结果，汇总排序返回结果（定义RecallServer类进行统一调度，其中定义各feature_pool、中间结果pool等）
 
-
+* def set_user_info(self, user_info):从召回引擎请求中得到初步user_info{"user_id":uid},并拉取feature_server中user_feature
+* 调用各召回策略接口
+  * item_cf：针对当前用户各个history记录找到相似文章列表再进行加权合并，返回最终排列截取结果
+  * user_cf：遍历当前用户各个相似用户的history记录并集中的文章， 针对每一个item计算与目标用户历史记录中的items的相似度再加权累加排序
+  * matrix_cf: 同item_cf
+  * fm_i2i: 同item_cf
+  * fm_u2i: 先实时调用feature_server完成user_embedding构造，再在线调用vector_server进行挑选最近item
+* def merge_rec_res：将各路结果统一度量（归一化）之后可结合各路不同权值weight在排序返回item在各路计算上累加的最终结果
 
 ### 三、原始数据描述
 
@@ -81,7 +88,11 @@ recall策略
 
 * 复习valid_step输出验证集上结果:try except
 
-* 理解线上召回流程：召回服务统一调度模块定义recallserver类，进行各路召回结果的汇总。具体每路召回如fm_usi，必要信息如user_env等在引擎发出请求时实时传入，然后在线读取feature_server对应的redis组装成user_embedding,其它数据可以预先存于其它redis（如fm_i2i_recall中间结果等,不及时更新）,预先计划好；然后调用vector_server算出相似电影列表。
+* 理解线上召回流程：召回服务统一调度模块定义recallserver类，进行各路召回结果进行再加权以及结果汇总。具体每路召回如fm_usi，必要信息如user_env等在引擎发出请求时实时传入，然后在线读取feature_server对应的redis组装成user_embedding,其它数据可以预先存于其它redis（如fm_i2i_recall中间结果等,不及时更新）,预先计划好；然后调用vector_server算出相似电影列表。
+
+* item_cf 计算i2i_sim,user_cf计算u2u_sim之后结合user_hists的召回方法
+
+* merge_rec_res中对各路返回结果进行归一化，并且将各路算法在某一item上的结果进行累加
 
     
 
@@ -111,6 +122,8 @@ recall策略
 * 改动3：类似project1，训练完一遍train集合再输出test集--效果也并不明显
 
 * 改动4：由于选用了多个item feature将item feature进行组合才能形成item embedding，对各feature_embedding进行了加和处理->input embedding
+
+* 改动5：TODO：server_inf中created_time_weight可以放在item_cf_recall代码里，不占用在线调用时间资源
 
   
 
