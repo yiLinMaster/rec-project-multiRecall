@@ -135,7 +135,7 @@ recall策略
   weight_dim = 16
   learning_rate = 0.001
 
-  ![1637564144051](C:\Users\Lenovo\AppData\Roaming\Typora\typora-user-images\1637564144051.png)
+  ![1637564144051](./img/1637564144051.png)
 
 * fm部分改动后：
 
@@ -145,4 +145,4 @@ recall策略
 
   test_show_step = 17850
 
-  ![1637917435014](C:\Users\Lenovo\AppData\Roaming\Typora\typora-user-images\1637917435014.png)
+  ![1637917435014](./img/1637917435014.png)
